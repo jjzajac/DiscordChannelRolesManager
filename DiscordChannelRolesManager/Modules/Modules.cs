@@ -1,10 +1,5 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
-using System.Net.Mime;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
@@ -51,29 +46,19 @@ namespace DiscordChannelRolesManager.Modules
                             };
                         }
                 );
-                var mess = await Context.Message.Channel.SendMessageAsync($"@everyone {name}");
             }
 
-            string s = dict.Aggregate("", (current, e) => current + $"- {e.Key} -> {e.Value} \n");
+            string s = dict.Aggregate("", (current, e) => current + $"- {e.Key} -> {e.Value}\n");
             var b = new EmbedBuilder
             {
                     Title = "Dodaj reakcje pod tym postem:",
                     Description = s,
             }.Build();
-            await Context.Channel.SendMessageAsync(embed: b);
-        }
-
-        [Command("dict")]
-        public async Task DictTestAsync([Remainder] IDictionary<string, string> dict)
-        {
-            string s = dict.Aggregate("", (current, e) => current + $"- {e.Key} -> {e.Value} \n");
-
-            var b = new EmbedBuilder
+            var res = await Context.Channel.SendMessageAsync(embed: b);
+            foreach (var keyValuePair in dict)
             {
-                    Title = "Dodaj reakcje pod tym postem:",
-                    Description = s,
-            }.Build();
-            await Context.Channel.SendMessageAsync(embed: b);
+                await res.AddReactionAsync(new Emoji(keyValuePair.Key));
+            }
         }
     }
 }
