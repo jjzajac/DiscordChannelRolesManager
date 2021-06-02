@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -7,28 +6,33 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using DiscordChannelRolesManager;
-using DiscordChannelRolesManager.TypeReaders;
+using DiscordChannelRolesManager.Helpers.TypeReaders;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace DiscordChannelRolesManager.Services
 {
-    public class CommandHandlingService
+    public class CommandHandler
     {
         private readonly CommandService _commands;
-        private readonly DiscordSocketClient _discord;
+        private readonly DiscordSocketClient _client;
         private readonly IServiceProvider _services;
+        private readonly ILogger<CommandHandler> _logger;
 
-        public CommandHandlingService(IServiceProvider services)
+        public CommandHandler(
+                CommandService commands, IServiceProvider services, ILogger<CommandHandler> logger,
+                DiscordSocketClient client
+        )
         {
-            _commands = services.GetRequiredService<CommandService>();
-            _discord = services.GetRequiredService<DiscordSocketClient>();
+            _commands = commands;
             _services = services;
+            _logger = logger;
+            _client = client;
 
             _commands.CommandExecuted += CommandExecutedAsync;
 
-            _discord.MessageReceived += MessageReceivedAsync;
-            _discord.ReactionAdded += ReactionAdded;
+            _client.MessageReceived += MessageReceivedAsync;
+            _client.ReactionAdded += ReactionAdded;
         }
 
         public async Task InitializeAsync()
@@ -52,14 +56,11 @@ namespace DiscordChannelRolesManager.Services
                                       .Select(
                                               line =>
                                               {
-                                                  var l = line[2..].TrimEnd().Split(" -> ");
+                                                  var l = line[2..].Split(" -> ");
                                                   return new KeyValuePair<string, string>(l[0], l[1]);
                                               }
                                       )
-                                      .ToDictionary(
-                                              keySelector: pair => pair.Key,
-                                              elementSelector: pair => pair.Value
-                                      );
+                                      .ToDictionary(pair => pair.Key, pair => pair.Value);
 
                 if (dd.TryGetValue(reaction.Emote.Name, out var s))
                 {
@@ -69,8 +70,6 @@ namespace DiscordChannelRolesManager.Services
                     var gu = await context.Guild.GetUserAsync(reaction.UserId);
                     var role = context.Guild.Roles.First(r => r.Name == s);
                     await gu.AddRoleAsync(role);
-                    var m = $"{reaction.User.Value.Username} react with {s}";
-                    await originChannel.SendMessageAsync($"Pong!\n{m}");
                 }
             }
         }
@@ -78,29 +77,26 @@ namespace DiscordChannelRolesManager.Services
 
         private async Task MessageReceivedAsync(SocketMessage rawMessage)
         {
-            // Ignore system messages, or messages from other bots
             if (rawMessage is not SocketUserMessage {Source: MessageSource.User} message)
                 return;
-            await Program.Log(new LogMessage(LogSeverity.Debug, "MessageReceivedHandler", rawMessage.Content));
-            // This value holds the offset where the prefix ends
+            _logger.LogDebug($"MessageReceivedHandler {rawMessage.Content}");
+
             var argPos = 0;
             if (!message.HasCharPrefix('!', ref argPos)) return;
-            var context = new SocketCommandContext(_discord, message);
+            var context = new SocketCommandContext(_client, message);
             var result = await _commands.ExecuteAsync(context, argPos, _services);
             if (result.IsSuccess)
             {
-                await Program.Log(new LogMessage(LogSeverity.Info, "MessageReceivedHandler", $"{result}"));
+                _logger.LogInformation($"MessageReceivedHandler {result}");
             }
         }
 
         private async Task CommandExecutedAsync(Optional<CommandInfo> command, ICommandContext context, IResult result)
         {
-
             if (!command.IsSpecified || result.IsSuccess)
                 return;
 
-
-            await Program.Log(new LogMessage(LogSeverity.Error, "CommandExecutedAsync", $"{result}"));
+            _logger.LogError($"CommandExecutedAsync {result}");
             await context.Channel.SendMessageAsync($"error: {result}");
         }
     }
