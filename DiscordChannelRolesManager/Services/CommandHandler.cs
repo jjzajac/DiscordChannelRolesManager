@@ -20,7 +20,9 @@ namespace DiscordChannelRolesManager.Services
         private readonly ILogger<CommandHandler> _logger;
 
         public CommandHandler(
-                CommandService commands, IServiceProvider services, ILogger<CommandHandler> logger,
+                CommandService commands,
+                IServiceProvider services,
+                ILogger<CommandHandler> logger,
                 DiscordSocketClient client
         )
         {
@@ -33,12 +35,48 @@ namespace DiscordChannelRolesManager.Services
 
             _client.MessageReceived += MessageReceivedAsync;
             _client.ReactionAdded += ReactionAdded;
+            _client.ReactionRemoved += ReactionRemoved;
         }
+
 
         public async Task InitializeAsync()
         {
             _commands.AddTypeReader(typeof(IDictionary<string, string>), new DictionaryTypeReader());
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _services);
+        }
+
+
+        private async Task ReactionRemoved(
+                Cacheable<IUserMessage, ulong> cachedMessage,
+                ISocketMessageChannel originChannel,
+                SocketReaction reaction
+        )
+        {
+            IUserMessage message = await cachedMessage.GetOrDownloadAsync();
+            if (message.Author.IsBot &&
+                message.Author.DiscriminatorValue == 2666)
+            {
+                var dd = message.Embeds.First().Description
+                                .Split("\n")
+                                .Select(
+                                        line =>
+                                        {
+                                            var l = line[2..].Split(" -> ");
+                                            return new KeyValuePair<string, string>(l[0], l[1]);
+                                        }
+                                )
+                                .ToDictionary(pair => pair.Key, pair => pair.Value);
+
+                if (dd.TryGetValue(reaction.Emote.Name, out var s))
+                {
+                    var context = new CommandContext(
+                            _services.GetService<DiscordSocketClient>(), message
+                    );
+                    var gu = await context.Guild.GetUserAsync(reaction.UserId);
+                    var role = context.Guild.Roles.First(r => r.Name == s);
+                    await gu.RemoveRoleAsync(role);
+                }
+            }
         }
 
 
@@ -48,24 +86,26 @@ namespace DiscordChannelRolesManager.Services
                 SocketReaction reaction
         )
         {
-            if (cachedMessage.Value.Author.IsBot &&
-                cachedMessage.Value.Author.DiscriminatorValue == 2666)
+            IUserMessage message = await cachedMessage.GetOrDownloadAsync();
+            if (message.Author.IsBot &&
+                !reaction.User.Value.IsBot &&
+                message.Author.DiscriminatorValue == 2666)
             {
-                var dd = cachedMessage.Value.Embeds.First().Description
-                                      .Split("\n")
-                                      .Select(
-                                              line =>
-                                              {
-                                                  var l = line[2..].Split(" -> ");
-                                                  return new KeyValuePair<string, string>(l[0], l[1]);
-                                              }
-                                      )
-                                      .ToDictionary(pair => pair.Key, pair => pair.Value);
+                var dd = message.Embeds.First().Description
+                                .Split("\n")
+                                .Select(
+                                        line =>
+                                        {
+                                            var l = line[2..].Split(" -> ");
+                                            return new KeyValuePair<string, string>(l[0], l[1]);
+                                        }
+                                )
+                                .ToDictionary(pair => pair.Key, pair => pair.Value);
 
                 if (dd.TryGetValue(reaction.Emote.Name, out var s))
                 {
                     var context = new CommandContext(
-                            _services.GetService<DiscordSocketClient>(), cachedMessage.Value
+                            _services.GetService<DiscordSocketClient>(), message
                     );
                     var gu = await context.Guild.GetUserAsync(reaction.UserId);
                     var role = context.Guild.Roles.First(r => r.Name == s);
