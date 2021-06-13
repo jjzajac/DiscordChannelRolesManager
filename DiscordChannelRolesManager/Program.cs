@@ -27,6 +27,7 @@ namespace DiscordChannelRolesManager
                                }
                        )
                )
+               .AddSingleton<IStoreCreatedInfoService, InMemoryStoreService>()
                .AddSingleton<CommandService>()
                .AddSingleton<CommandHandler>()
                .AddSingleton<LoggingService>();
