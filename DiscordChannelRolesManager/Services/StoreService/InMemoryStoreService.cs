@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace DiscordChannelRolesManager.Services
+namespace DiscordChannelRolesManager.Services.StoreService
 {
     public class InMemoryStoreService : IStoreCreatedInfoService
     {
@@ -8,8 +8,8 @@ namespace DiscordChannelRolesManager.Services
 
         public class KeyLabelGuild
         {
-            public string Label { get; set; }
-            public ulong Guild { get; set; }
+            public string Label { get; init; }
+            public ulong Guild { get; init; }
 
 
             public override string ToString()

@@ -1,9 +1,11 @@
-namespace DiscordChannelRolesManager.Services
+using System.Collections.Generic;
+
+namespace DiscordChannelRolesManager.Services.StoreService
 {
     public class CreatedInfo
     {
-        public ulong ChannelId { get; init; }
-        public ulong MessageId { get; init; }
+        public IList<ulong> ChannelsId { get; init; }
+        public IList<ulong> RolesId { get; init; }
         public ulong? Cat { get; init; }
         public bool IsCatCreated { get; init; } = false;
     }

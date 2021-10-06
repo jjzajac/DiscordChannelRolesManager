@@ -1,4 +1,4 @@
-namespace DiscordChannelRolesManager.Services
+namespace DiscordChannelRolesManager.Services.StoreService
 {
     public interface IStoreCreatedInfoService
     {

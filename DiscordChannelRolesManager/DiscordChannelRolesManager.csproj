@@ -31,4 +31,19 @@
       <Folder Include="Helpers" />
     </ItemGroup>
 
+    <ItemGroup>
+      <EmbeddedResource Update="Resource\CreateChannelModules.resx">
+        <Generator>ResXFileCodeGenerator</Generator>
+        <LastGenOutput>CreateChannelModules.Designer.cs</LastGenOutput>
+      </EmbeddedResource>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Resource\CreateChannelModules.Designer.cs">
+        <DesignTime>True</DesignTime>
+        <AutoGen>True</AutoGen>
+        <DependentUpon>CreateChannelModules.resx</DependentUpon>
+      </Compile>
+    </ItemGroup>
+
 </Project>

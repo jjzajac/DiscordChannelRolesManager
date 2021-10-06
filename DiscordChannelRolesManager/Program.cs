@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Discord.Commands;
 using Discord.WebSocket;
 using DiscordChannelRolesManager.Services;
+using DiscordChannelRolesManager.Services.StoreService;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
@@ -11,26 +12,24 @@ namespace DiscordChannelRolesManager
 {
     public static class Startup
     {
-        public static void ServicesCollection(IServiceCollection services)
-        {
-            services.AddHostedService<EntryPoint>()
-                    .RegisterServices();
-        }
+        public static void ServicesCollection(IServiceCollection services) => services
+                                                                              .AddHostedService<EntryPoint>()
+                                                                              .RegisterServices();
 
-        private static void RegisterServices(this IServiceCollection services)
-            => services
-               .AddSingleton(
-                       _ => new DiscordSocketClient(
-                               new DiscordSocketConfig
-                               {
-                                       MessageCacheSize = 100,
-                               }
-                       )
-               )
-               .AddSingleton<IStoreCreatedInfoService, InMemoryStoreService>()
-               .AddSingleton<CommandService>()
-               .AddSingleton<CommandHandler>()
-               .AddSingleton<LoggingService>();
+
+        private static IServiceCollection RegisterServices(this IServiceCollection services) => services
+                .AddSingleton(
+                        _ => new DiscordSocketClient(
+                                new DiscordSocketConfig
+                                {
+                                        MessageCacheSize = 100,
+                                }
+                        )
+                )
+                .AddSingleton<IStoreCreatedInfoService, InMemoryStoreService>()
+                .AddSingleton<CommandService>()
+                .AddSingleton<CommandHandler>()
+                .AddSingleton<LoggingService>();
     }
 
     internal static class Program
